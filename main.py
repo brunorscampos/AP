@@ -148,16 +148,22 @@ class SendMetrics(keras.callbacks.Callback):
             nni.report_intermediate_result(logs['val_acc'])
         else:
             nni.report_intermediate_result(logs['val_accuracy'])
-
+from keras.callbacks import ModelCheckpoint
 def train(args, params):
     '''
     Train model
     '''
+    current_directory = os.getcwd()
+
+    model_checkpoint_path = os.path.join(current_directory, 'best_model.h5')
+
+    checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
+
     x_train, y_train, x_test, y_test = load_mnist_data(args)
     model = create_mnist_model(params)
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,
-        validation_data=(x_test, y_test), callbacks=[SendMetrics(), TensorBoard(log_dir=TENSORBOARD_DIR)])
+        validation_data=(x_test, y_test), callbacks=[SendMetrics(), TensorBoard(log_dir=TENSORBOARD_DIR), checkpoint_callback])
 
     _, acc = model.evaluate(x_test, y_test, verbose=0)
     LOG.debug('Final result is: %d', acc)

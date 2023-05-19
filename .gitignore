@@ -1,3 +1,4 @@
 data
 MedNIST
 *.log
+*.h5
