@@ -78,7 +78,7 @@ import glob
 import cv2
 
 def load_mnist_data(args):
-    mednist_path = './MedNIST/MedNIST'  # Altere para o caminho correto do diretório MedNIST
+    mednist_path = './MedNIST'  # Altere para o caminho correto do diretório MedNIST
 
     # Carregar imagens de treinamento
     train_images = []
