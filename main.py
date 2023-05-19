@@ -33,8 +33,8 @@ LOG = logging.getLogger('mnist_keras')
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = os.environ['NNI_OUTPUT_DIR']
 
-H, W = 28, 28
-NUM_CLASSES = 10
+H, W = 64,64
+NUM_CLASSES = 6
 
 def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
     '''
@@ -58,19 +58,41 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=optimizer, metrics=['accuracy'])
 
     return model
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import glob
+from PIL import Image
 
-def load_mnist_data(args):
+def load_mednist_data(args):
     '''
-    Load MNIST dataset
+    Load medNIST dataset
     '''
-    mnist_path = os.path.join(os.environ.get('NNI_OUTPUT_DIR'), 'mnist.npz')
-    (x_train, y_train), (x_test, y_test) = mnist.load_data(path=mnist_path)
-    os.remove(mnist_path)
+    data_path = './MedNIST/MedNIST/'  # Substitua pelo caminho correto para o diretório mednist
 
-    x_train = (np.expand_dims(x_train, -1).astype(np.float) / 255.)[:args.num_train]
-    x_test = (np.expand_dims(x_test, -1).astype(np.float) / 255.)[:args.num_test]
-    y_train = keras.utils.to_categorical(y_train, NUM_CLASSES)[:args.num_train]
-    y_test = keras.utils.to_categorical(y_test, NUM_CLASSES)[:args.num_test]
+    # Carregar imagens
+    image_files = glob.glob(data_path + '/*/*.jpeg')
+    images = []
+    labels = []
+    for file in image_files:
+        image = Image.open(file)
+        image = image.resize((H, W))  # Redimensionar para 64x64 pixels
+        image = np.array(image) / 255.0  # Normalizar os valores dos pixels entre 0 e 1
+        images.append(image)
+        labels.append(file.split('/')[-2])  # Obter o rótulo a partir do nome do diretório
+
+    # Codificar rótulos em números
+    label_encoder = LabelEncoder()
+    labels = label_encoder.fit_transform(labels)
+    num_classes = len(label_encoder.classes_)
+
+    # Dividir os dados em treinamento e teste
+    x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
+
+    # Converter para arrays numpy e ajustar dimensão dos dados
+    x_train = np.expand_dims(np.array(x_train), -1)
+    x_test = np.expand_dims(np.array(x_test), -1)
+    y_train = keras.utils.to_categorical(np.array(y_train), num_classes)
+    y_test = keras.utils.to_categorical(np.array(y_test), num_classes)
 
     LOG.debug('x_train shape: %s', (x_train.shape,))
     LOG.debug('x_test shape: %s', (x_test.shape,))
@@ -96,8 +118,12 @@ def train(args, params):
     '''
     Train model
     '''
-    x_train, y_train, x_test, y_test = load_mnist_data(args)
-    model = create_mnist_model(params)
+    '''
+    Train model
+    '''
+    x_train, y_train, x_test, y_test = load_mednist_data(args)
+    model = create_mnist_model(params, input_shape=(H, W, 1), num_classes=y_train.shape[1])
+
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,
         validation_data=(x_test, y_test), callbacks=[SendMetrics(), TensorBoard(log_dir=TENSORBOARD_DIR)])

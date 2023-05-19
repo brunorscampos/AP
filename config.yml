@@ -16,6 +16,6 @@ tuner:
     #choice: maximize, minimize
     optimize_mode: maximize
 trial:
-  command: python mnist-keras.py
+  command: python main.py
   codeDir: .
   gpuNum: 0
