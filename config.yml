@@ -1,6 +1,6 @@
 authorName: default
 experimentName: example_mnist-keras
-trialConcurrency: 1
+trialConcurrency: 2
 maxExecDuration: 1h
 maxTrialNum: 10
 #choice: local, remote, pai

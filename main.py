@@ -19,6 +19,7 @@ import argparse
 import logging
 
 import os
+import random
 import keras
 import numpy as np
 from keras import backend as K
@@ -30,6 +31,19 @@ from keras.models import Sequential
 import nni
 
 LOG = logging.getLogger('mnist_keras')
+LOG.setLevel(logging.DEBUG)
+
+# Criar um manipulador de arquivo
+log_file = 'mnist_keras.log'
+file_handler = logging.FileHandler(log_file)
+
+# Definir o formato do log
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+# Adicionar o manipulador de arquivo ao logger
+LOG.addHandler(file_handler)
+
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = os.environ['NNI_OUTPUT_DIR']
 
@@ -41,11 +55,11 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
     Create simple convolutional model
     '''
     layers = [
-        Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape),
-        Conv2D(64, (3, 3), activation='relu'),
+        Conv2D(8, kernel_size=(3, 3), activation='relu', input_shape=input_shape),
+        Conv2D(8, (3, 3), activation='relu'),
         MaxPooling2D(pool_size=(2, 2)),
         Flatten(),
-        Dense(100, activation='relu'),
+        Dense(10, activation='relu'),
         Dense(num_classes, activation='softmax')
     ]
 
@@ -58,46 +72,67 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=optimizer, metrics=['accuracy'])
 
     return model
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+
+
 import glob
-from PIL import Image
+import cv2
 
-def load_mednist_data(args):
-    '''
-    Load medNIST dataset
-    '''
-    data_path = './MedNIST/MedNIST/'  # Substitua pelo caminho correto para o diretório mednist
+def load_mnist_data(args):
+    mednist_path = './MedNIST/MedNIST'  # Altere para o caminho correto do diretório MedNIST
 
-    # Carregar imagens
-    image_files = glob.glob(data_path + '/*/*.jpeg')
-    images = []
-    labels = []
-    for file in image_files:
-        image = Image.open(file)
-        image = image.resize((H, W))  # Redimensionar para 64x64 pixels
-        image = np.array(image) / 255.0  # Normalizar os valores dos pixels entre 0 e 1
-        images.append(image)
-        labels.append(file.split('/')[-2])  # Obter o rótulo a partir do nome do diretório
+    # Carregar imagens de treinamento
+    train_images = []
+    train_labels = []
+    for class_name in os.listdir(mednist_path):
+        class_path = os.path.join(mednist_path, class_name)
+        if os.path.isdir(class_path):
+            images = glob.glob(os.path.join(class_path, '*.jpeg'))
+            for image_path in images[:args.num_train]:
+                image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+                image = cv2.resize(image, (H, W))
+                train_images.append(image)
+                train_labels.append(class_name)
 
-    # Codificar rótulos em números
-    label_encoder = LabelEncoder()
-    labels = label_encoder.fit_transform(labels)
-    num_classes = len(label_encoder.classes_)
+    # Carregar imagens de teste
+    test_images = []
+    test_labels = []
+    for class_name in os.listdir(mednist_path):
+        class_path = os.path.join(mednist_path, class_name)
+        if os.path.isdir(class_path):
+            images = glob.glob(os.path.join(class_path, '*.jpeg'))
+            for image_path in images[:args.num_test]:
+                image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+                image = cv2.resize(image, (H, W))
+                test_images.append(image)
+                test_labels.append(class_name)
 
-    # Dividir os dados em treinamento e teste
-    x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
+    x_train = np.expand_dims(np.array(train_images), -1).astype(np.float) / 255.
+    x_test = np.expand_dims(np.array(test_images), -1).astype(np.float) / 255.
 
-    # Converter para arrays numpy e ajustar dimensão dos dados
-    x_train = np.expand_dims(np.array(x_train), -1)
-    x_test = np.expand_dims(np.array(x_test), -1)
-    y_train = keras.utils.to_categorical(np.array(y_train), num_classes)
-    y_test = keras.utils.to_categorical(np.array(y_test), num_classes)
+    # Converter rótulos para numéricos
+    label_to_index = {label: index for index, label in enumerate(set(train_labels))}
+    y_train = np.array([label_to_index[label] for label in train_labels])
+    y_test = np.array([label_to_index[label] for label in test_labels])
+
+    num_classes = len(label_to_index)
+
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_test = keras.utils.to_categorical(y_test, num_classes)
 
     LOG.debug('x_train shape: %s', (x_train.shape,))
     LOG.debug('x_test shape: %s', (x_test.shape,))
+    # Verificar se os dados foram carregados corretamente
+    LOG.debug('Number of training samples: %d', len(train_images))
+    LOG.debug('Number of test samples: %d', len(test_images))
 
+    # Exibir algumas amostras de imagens e rótulos
+    sample_indices = random.sample(range(len(train_images)), 5)
+    for index in sample_indices:
+        image = train_images[index]
+        label = train_labels[index]
+        LOG.debug('Sample image: %s, Label: %s', image.shape, label)
     return x_train, y_train, x_test, y_test
+
 
 class SendMetrics(keras.callbacks.Callback):
     '''
@@ -118,12 +153,8 @@ def train(args, params):
     '''
     Train model
     '''
-    '''
-    Train model
-    '''
-    x_train, y_train, x_test, y_test = load_mednist_data(args)
-    model = create_mnist_model(params, input_shape=(H, W, 1), num_classes=y_train.shape[1])
-
+    x_train, y_train, x_test, y_test = load_mnist_data(args)
+    model = create_mnist_model(params)
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,
         validation_data=(x_test, y_test), callbacks=[SendMetrics(), TensorBoard(log_dir=TENSORBOARD_DIR)])
