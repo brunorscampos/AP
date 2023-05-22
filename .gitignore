@@ -2,3 +2,6 @@ data
 MedNIST
 *.log
 *.h5
+logs
+*.png
+archive

@@ -45,7 +45,7 @@ file_handler.setFormatter(formatter)
 LOG.addHandler(file_handler)
 
 K.set_image_data_format('channels_last')
-TENSORBOARD_DIR = os.environ['NNI_OUTPUT_DIR']
+TENSORBOARD_DIR = current_directory = os.getcwd() + '/logs'
 
 H, W = 64,64
 NUM_CLASSES = 6
