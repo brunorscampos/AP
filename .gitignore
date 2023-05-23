@@ -3,4 +3,6 @@ MedNIST
 *.log
 *.h5
 credit
+logs
+*.png
 archive
