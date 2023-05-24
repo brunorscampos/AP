@@ -30,11 +30,11 @@ from keras.models import Sequential
 
 import nni
 
-LOG = logging.getLogger('mnist_keras')
+LOG = logging.getLogger('land_keras')
 LOG.setLevel(logging.DEBUG)
 
 # Criar um manipulador de arquivo
-log_file = 'mnist_keras.log'
+log_file = 'land_keras.log'
 file_handler = logging.FileHandler(log_file)
 
 # Definir o formato do log
@@ -47,8 +47,8 @@ LOG.addHandler(file_handler)
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = current_directory = os.getcwd() + '/logs'
 
-H, W = 64,64
-NUM_CLASSES = 6
+H, W = 256,256
+NUM_CLASSES = 21
 
 def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
     '''
@@ -78,7 +78,7 @@ import glob
 import cv2
 
 def load_mnist_data():
-    mednist_path = './MedNIST'  # Altere para o caminho correto do diretório MedNIST
+    land_path = './archive/images/'  # Altere para o caminho correto do diretório MedNIST
 
     # Carregar imagens de treinamento
     train_images = []
@@ -86,10 +86,10 @@ def load_mnist_data():
     test_images = []
     test_labels = []
 
-    for class_name in os.listdir(mednist_path):
-        class_path = os.path.join(mednist_path, class_name)
+    for class_name in os.listdir(land_path):
+        class_path = os.path.join(land_path, class_name)
         if os.path.isdir(class_path):
-            images = glob.glob(os.path.join(class_path, '*.jpeg'))
+            images = glob.glob(os.path.join(class_path, '*.png'))
             num_images = len(images)
             num_test_images = int(num_images * 0.3)  # 30% para teste
 
@@ -107,13 +107,12 @@ def load_mnist_data():
     x_train = np.expand_dims(np.array(train_images), -1).astype(np.float) / 255.
     x_test = np.expand_dims(np.array(test_images), -1).astype(np.float) / 255.
 
-    # Converter rótulos para numéricos
     label_to_index = {label: index for index, label in enumerate(set(train_labels))}
     y_train = np.array([label_to_index[label] for label in train_labels])
     y_test = np.array([label_to_index[label] for label in test_labels])
 
     num_classes = len(label_to_index)
-
+    
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
@@ -138,18 +137,20 @@ class SendMetrics(keras.callbacks.Callback):
             nni.report_intermediate_result(logs['val_acc'])
         else:
             nni.report_intermediate_result(logs['val_accuracy'])
-            
 from keras.callbacks import ModelCheckpoint
+
+
 def train(args, params):
     '''
     Train model
     '''
     current_directory = os.getcwd()
+
     model_checkpoint_path = os.path.join(current_directory, 'best_model.h5')
+
     checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
 
     x_train, y_train, x_test, y_test = load_mnist_data()
-    
     model = create_mnist_model(params)
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,

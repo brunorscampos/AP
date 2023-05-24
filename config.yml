@@ -16,6 +16,6 @@ tuner:
     #choice: maximize, minimize
     optimize_mode: maximize
 trial:
-  command: python main.py
+  command: python land.py
   codeDir: .
   gpuNum: 0
