@@ -75,9 +75,9 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
     model = Sequential(layers)
 
     if hyper_params['optimizer'] == 'Adam':
-        optimizer = keras.optimizers.Adam(lr=hyper_params['learning_rate'])
+        optimizer = keras.optimizers.Adam(learning_rate=hyper_params['learning_rate'])
     else:
-        optimizer = keras.optimizers.SGD(lr=hyper_params['learning_rate'], momentum=0.9)
+        optimizer = keras.optimizers.SGD(learning_rate=hyper_params['learning_rate'], momentum=0.9)
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=optimizer, metrics=['accuracy'])
 
     return model
