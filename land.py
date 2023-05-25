@@ -47,21 +47,30 @@ LOG.addHandler(file_handler)
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = current_directory = os.getcwd() + '/logs'
 
-H, W = 256,256
+H, W =128,128
 NUM_CLASSES = 21
 
 def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
+    
+    
     '''
     Create simple convolutional model
     '''
-    layers = [
-        Conv2D(8, kernel_size=(3, 3), activation='relu', input_shape=input_shape),
-        Conv2D(8, (3, 3), activation='relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Flatten(),
-        Dense(10, activation='relu'),
-        Dense(num_classes, activation='softmax')
-    ]
+    layers = []
+    layers.append(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=(hyper_params['W_S'],hyper_params['W_S'],1)))
+    layers.append(Conv2D(64, (3, 3), activation='relu'))
+    layers.append(Conv2D(64, (3, 3), activation='relu'))
+    layers.append(MaxPooling2D(pool_size=(2, 2)))
+    layers.append(Flatten())
+    for _ in range(hyper_params['dense_layers']):
+        layers.append(Dense(hyper_params['dense_nodes'], activation='relu'))
+        
+    layers.append(Dense(num_classes, activation='softmax'))
+    
+    layers.append(Dense(num_classes, activation='softmax'))
+
+    model = Sequential(layers)
+    
 
     model = Sequential(layers)
 
@@ -77,7 +86,7 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
 import glob
 import cv2
 
-def load_mnist_data():
+def load_mnist_data(hyper_params):
     land_path = './archive/images/'  # Altere para o caminho correto do diretório MedNIST
 
     # Carregar imagens de treinamento
@@ -95,7 +104,7 @@ def load_mnist_data():
 
             for i, image_path in enumerate(images):
                 image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-                image = cv2.resize(image, (H, W))
+                image = cv2.resize(image, (hyper_params['W_S'], hyper_params['W_S']))
 
                 if i < num_test_images:
                     test_images.append(image)
@@ -146,11 +155,11 @@ def train(args, params):
     '''
     current_directory = os.getcwd()
 
-    model_checkpoint_path = os.path.join(current_directory, 'best_model.h5')
+    model_checkpoint_path = os.path.join(current_directory, 'best_model_land.h5')
 
     checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
 
-    x_train, y_train, x_test, y_test = load_mnist_data()
+    x_train, y_train, x_test, y_test = load_mnist_data(params)
     model = create_mnist_model(params)
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,
@@ -166,7 +175,10 @@ def generate_default_params():
     '''
     return {
         'optimizer': 'Adam',
-        'learning_rate': 0.001
+        'learning_rate': 0.001,
+        'W_S' : 128,
+        'dense_nodes':10,
+        "dense_layers" : 1
     }
 
 if __name__ == '__main__':

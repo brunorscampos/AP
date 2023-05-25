@@ -1,20 +1,22 @@
 authorName: default
 experimentName: example_mnist-keras
 trialConcurrency: 1
-maxExecDuration: 1h
-maxTrialNum: 1
+maxExecDuration: 100000h
+maxTrialNum: 5
 #choice: local, remote, pai
 trainingServicePlatform: local
-searchSpacePath: search_space.json
+searchSpacePath: search_space_land.json
 #choice: true, false
 useAnnotation: false
 tuner:
   #choice: TPE, Random, Anneal, Evolution, BatchTuner, MetisTuner
   #SMAC (SMAC should be installed through nnictl)
-  builtinTunerName: TPE
+  builtinTunerName: Evolution 
   classArgs:
+    optimize_mode: 'maximize'
+    population_size : 100
     #choice: maximize, minimize
-    optimize_mode: maximize
+    #optimize_mode: maximize
 trial:
   command: python land.py
   codeDir: .

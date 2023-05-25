@@ -145,7 +145,7 @@ def train(args, params):
     Train model
     '''
     current_directory = os.getcwd()
-    model_checkpoint_path = os.path.join(current_directory, 'best_model.h5')
+    model_checkpoint_path = os.path.join(current_directory, 'best_model_mednist.h5')
     checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
 
     x_train, y_train, x_test, y_test = load_mnist_data()
