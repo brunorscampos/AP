@@ -25,8 +25,15 @@ import numpy as np
 from keras import backend as K
 from keras.callbacks import TensorBoard
 from keras.datasets import mnist
-from keras.layers import Conv2D, Dense, Flatten, MaxPooling2D
+from keras.layers import Conv2D, Dense, Flatten, MaxPooling2D,Conv2DTranspose
 from keras.models import Sequential
+
+import tensorflow as tf
+
+
+import tensorflow as tf
+tf.debugging.set_log_device_placement(True)
+
 
 import nni
 
@@ -44,10 +51,14 @@ file_handler.setFormatter(formatter)
 # Adicionar o manipulador de arquivo ao logger
 LOG.addHandler(file_handler)
 
+#print(f"Tensorflow version: {tf.__version__}")
+#print(f"Keras Version: {tf.keras.__version__}")
+#print("GPU is", "available" if tf.config.list_physical_devices('GPU') else "NOT AVAILABLE")
+
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = current_directory = os.getcwd() + '/logs'
 
-H, W =128,128
+H, W =64,64
 NUM_CLASSES = 21
 
 def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
@@ -56,30 +67,43 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
     '''
     Create simple convolutional model
     '''
-    layers = []
-    layers.append(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=(hyper_params['W_S'],hyper_params['W_S'],1)))
-    layers.append(Conv2D(64, (3, 3), activation='relu'))
-    layers.append(Conv2D(64, (3, 3), activation='relu'))
-    layers.append(MaxPooling2D(pool_size=(2, 2)))
-    layers.append(Flatten())
-    for _ in range(hyper_params['dense_layers']):
-        layers.append(Dense(hyper_params['dense_nodes'], activation='relu'))
+    #layers = []
+    #layers.append(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    #layers.append(Conv2D(64, (3, 3), activation='relu'))
+    #layers.append(Conv2D(64, (3, 3), activation='relu'))
+    #layers.append(MaxPooling2D(pool_size=(2, 2)))
+    #layers.append(Flatten())
+    #
+    #for _ in range(hyper_params['dense_layers']):
+    #    layers.append(Dense(hyper_params['dense_nodes'], activation='relu'))
+    #    
+    #layers.append(Dense(num_classes, activation='softmax'))
+    #    model = Sequential(layers)
+    
+    model = Sequential()
+
+    model.add(Conv2D(64, kernel_size=3, input_shape=(H,W,1)))
+    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
+    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
+    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Flatten())
+    
+    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
+    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
+    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
+    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
         
-    layers.append(Dense(num_classes, activation='softmax'))
+    model.add(Dense(12544, input_shape=(hyper_params['dense_nodes'],)))
     
-    layers.append(Dense(num_classes, activation='softmax'))
-
-    model = Sequential(layers)
+    model.add(Dense(num_classes, activation='softmax'))
     
-
-    model = Sequential(layers)
 
     if hyper_params['optimizer'] == 'Adam':
         optimizer = keras.optimizers.Adam(learning_rate=hyper_params['learning_rate'])
     else:
         optimizer = keras.optimizers.SGD(learning_rate=hyper_params['learning_rate'], momentum=0.9)
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=optimizer, metrics=['accuracy'])
-
     return model
 
 
@@ -104,7 +128,7 @@ def load_mnist_data(hyper_params):
 
             for i, image_path in enumerate(images):
                 image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-                image = cv2.resize(image, (hyper_params['W_S'], hyper_params['W_S']))
+                image = cv2.resize(image, (W,H))
 
                 if i < num_test_images:
                     test_images.append(image)
@@ -113,8 +137,8 @@ def load_mnist_data(hyper_params):
                     train_images.append(image)
                     train_labels.append(class_name)
 
-    x_train = np.expand_dims(np.array(train_images), -1).astype(np.float) / 255.
-    x_test = np.expand_dims(np.array(test_images), -1).astype(np.float) / 255.
+    x_train = np.expand_dims(np.array(train_images), -1).astype(float) / 255.
+    x_test = np.expand_dims(np.array(test_images), -1).astype(float) / 255.
 
     label_to_index = {label: index for index, label in enumerate(set(train_labels))}
     y_train = np.array([label_to_index[label] for label in train_labels])
@@ -142,10 +166,13 @@ class SendMetrics(keras.callbacks.Callback):
         '''
         LOG.debug(logs)
         # TensorFlow 2.0 API reference claims the key is `val_acc`, but in fact it's `val_accuracy`
-        if 'val_acc' in logs:
-            nni.report_intermediate_result(logs['val_acc'])
+        if 'val_acc' in logs and 'val_loss' in logs:
+            nni.report_intermediate_result({'accuracy': logs['val_acc'], 'loss': logs['val_loss']})
+        elif 'val_accuracy' in logs and 'val_loss' in logs:
+            nni.report_intermediate_result({'accuracy': logs['val_accuracy'], 'loss': logs['val_loss']})
         else:
-            nni.report_intermediate_result(logs['val_accuracy'])
+            LOG.warning("Accuracy or Loss not found in logs.")
+            
 from keras.callbacks import ModelCheckpoint
 
 
@@ -156,7 +183,7 @@ def train(args, params):
     current_directory = os.getcwd()
 
     model_checkpoint_path = os.path.join(current_directory, 'best_model_land.h5')
-
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, mode='min')
     checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
 
     x_train, y_train, x_test, y_test = load_mnist_data(params)
@@ -175,15 +202,14 @@ def generate_default_params():
     '''
     return {
         'optimizer': 'Adam',
-        'learning_rate': 0.001,
-        'W_S' : 128,
-        'dense_nodes':10,
-        "dense_layers" : 1
+        'learning_rate': 0.0001,
+        'dense_nodes':32,
+        'conv_nodes':32,
     }
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--batch_size", type=int, default=200, help="batch size", required=False)
+    PARSER.add_argument("--batch_size", type=int, default=64, help="batch size", required=False)
     PARSER.add_argument("--epochs", type=int, default=10, help="Train epochs", required=False)
     PARSER.add_argument("--num_train", type=int, default=60000, help="Number of train samples to be used, maximum 60000", required=False)
     PARSER.add_argument("--num_test", type=int, default=10000, help="Number of test samples to be used, maximum 10000", required=False)

@@ -6,3 +6,5 @@ credit
 logs
 *.png
 archive
+lightning_logs
+__pycache__

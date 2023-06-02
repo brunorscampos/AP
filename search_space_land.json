@@ -1,7 +1,6 @@
 {
     "optimizer":{"_type":"choice","_value":["Adam"]},
-    "learning_rate":{"_type":"choice","_value":[0.0001, 0.001, 0.005]},
-    "W_S":{"_type":"choice","_value":[ 64, 256]},
-    "dense_nodes": {"_type":"choice","_value":[64, 128, 256]},
-    "dense_layers" : {"_type":"choice","_value":[1,2,3]}
+    "learning_rate":{"_type":"choice","_value":[0.0001,0.001, 0.0005,0.00001]},
+    "dense_nodes": {"_type":"choice","_value":[32,64, 128,526,1024]},
+    "conv_nodes": {"_type":"choice","_value":[32,64,128]}
 }

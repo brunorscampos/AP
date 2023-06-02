@@ -1,7 +1,7 @@
 authorName: default
 experimentName: example_mnist-keras
 trialConcurrency: 1
-maxExecDuration: 100000h
+maxExecDuration: 10000000000h
 maxTrialNum: 5
 #choice: local, remote, pai
 trainingServicePlatform: local
@@ -14,9 +14,10 @@ tuner:
   builtinTunerName: Evolution 
   classArgs:
     optimize_mode: 'maximize'
-    population_size : 100
+    population_size : 30
     #choice: maximize, minimize
     #optimize_mode: maximize
+
 trial:
   command: python land.py
   codeDir: .
