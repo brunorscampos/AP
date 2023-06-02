@@ -8,3 +8,5 @@ logs
 archive
 lightning_logs
 __pycache__
+usa_real_estate
+tpot_regression_test.py
