@@ -6,3 +6,5 @@ credit
 logs
 *.png
 archive
+usa_real_estate
+tpot_regression_test.py
