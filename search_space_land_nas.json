@@ -1,0 +1,12 @@
+{
+
+    "camadas": {"_type":"choice","_value":[1,2,3,4]},
+    "conv1": {"_type":"choice","_value":[1,2,3]},
+    "conv1_aux":{"_type":"choice","_value":[1,0]},
+    "drop1":{"_type":"choice","_value":[0,1,1]},
+    "conv2": {"_type":"choice","_value":[1,2]},
+    "conv2_aux": {"_type":"choice","_value":[1,0]},
+    "drop2":{"_type":"choice","_value":[1,0,1]},
+    "dense_layers1":{"_type":"choice","_value":[2,4,6]},
+    "dense_layers2": {"_type":"choice","_value":[2,4,6]}
+}
