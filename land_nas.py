@@ -83,12 +83,12 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
                 
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Flatten())
-    
+   
     for _ in range(hyper_params['dense_layers1']):
-        model.add(Dense(12544, activation='relu'))
+        model.add(Dense(2048, activation='relu'))
     
     for _ in range(hyper_params['dense_layers2']):
-        model.add(Dense(12544/32, activation='relu'))
+        model.add(Dense(512, activation='relu'))
 
     model.add(Dense(num_classes, activation='softmax'))
     
