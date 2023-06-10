@@ -124,7 +124,7 @@ def generate_default_params():
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--batch_size", type=int, default=64, help="batch size", required=False)
-    PARSER.add_argument("--epochs", type=int, default=10, help="Train epochs", required=False)
+    PARSER.add_argument("--epochs", type=int, default=30, help="Train epochs", required=False)
     PARSER.add_argument("--num_train", type=int, default=60000, help="Number of train samples to be used, maximum 60000", required=False)
     PARSER.add_argument("--num_test", type=int, default=10000, help="Number of test samples to be used, maximum 10000", required=False)
 

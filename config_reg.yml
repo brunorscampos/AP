@@ -2,7 +2,7 @@ authorName: default
 experimentName: example_mnist-keras
 trialConcurrency: 1
 maxExecDuration: 10000000000h
-maxTrialNum: 5
+maxTrialNum: 10
 #choice: local, remote, pai
 trainingServicePlatform: local
 searchSpacePath: search_space_reg.json
@@ -13,8 +13,8 @@ tuner:
   #SMAC (SMAC should be installed through nnictl)
   builtinTunerName: Evolution 
   classArgs:
-    optimize_mode: 'maximize'
-    population_size : 30
+    optimize_mode: 'minimize'
+    population_size : 50
     #choice: maximize, minimize
     #optimize_mode: maximize
 

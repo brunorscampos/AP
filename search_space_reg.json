@@ -1,9 +1,9 @@
 {
     "optimizer":{"_type":"choice","_value":["Adam"]},
     "learning_rate":{"_type":"choice","_value":[0.0001,0.001, 0.0005,0.00001]},
-    "dense_nodes1": {"_type":"choice","_value":[32,64, 128,526,1024]},
-    "dense_nodes2": {"_type":"choice","_value":[32,64, 128,526,1024]},
-    "dense_nodes3": {"_type":"choice","_value":[32,64, 128,526,1024]},
-    "dense_nodes4": {"_type":"choice","_value":[32,64, 128,526,1024]},
+    "dense_nodes1": {"_type":"choice","_value":[32,64, 128,526,1024,2048]},
+    "dense_nodes2": {"_type":"choice","_value":[32,64, 128,526,1024,2048]},
+    "dense_nodes3": {"_type":"choice","_value":[32,64, 128,526,1024,2048]},
+    "dense_nodes4": {"_type":"choice","_value":[32,64, 128,526,1024,2048]},
     "activation": {"_type":"choice","_value":["relu","softmax","sigmoid"]}
 }
