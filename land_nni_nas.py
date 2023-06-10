@@ -1,23 +1,5 @@
-# Copyright (c) Microsoft Corporation
-# All rights reserved.
-#
-# MIT License
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-# documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-# to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-# The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-# BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 import argparse
 import logging
-
 import os
 import random
 import keras
@@ -25,23 +7,17 @@ import numpy as np
 from keras import backend as K
 from keras.callbacks import TensorBoard
 from keras.datasets import mnist
-from keras.layers import Conv2D, Dense, Flatten, MaxPooling2D,Conv2DTranspose
+from keras.layers import Conv2D, Dense, Flatten, MaxPooling2D,Dropout
 from keras.models import Sequential
-
-import tensorflow as tf
-
-
 import tensorflow as tf
 tf.debugging.set_log_device_placement(True)
-
-
 import nni
 
-LOG = logging.getLogger('land_keras')
+LOG = logging.getLogger('land_nas_keras')
 LOG.setLevel(logging.DEBUG)
 
 # Criar um manipulador de arquivo
-log_file = 'land_keras.log'
+log_file = 'land_nas_keras.log'
 file_handler = logging.FileHandler(log_file)
 
 # Definir o formato do log
@@ -62,47 +38,38 @@ H, W =64,64
 NUM_CLASSES = 21
 
 def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
-    
-    
     '''
     Create simple convolutional model
     '''
-    #layers = []
-    #layers.append(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
-    #layers.append(Conv2D(64, (3, 3), activation='relu'))
-    #layers.append(Conv2D(64, (3, 3), activation='relu'))
-    #layers.append(MaxPooling2D(pool_size=(2, 2)))
-    #layers.append(Flatten())
-    #
-    #for _ in range(hyper_params['dense_layers']):
-    #    layers.append(Dense(hyper_params['dense_nodes'], activation='relu'))
-    #    
-    #layers.append(Dense(num_classes, activation='softmax'))
-    #    model = Sequential(layers)
-    
     model = Sequential()
 
-    model.add(Conv2D(64, kernel_size=3, input_shape=(H,W,1)))
-    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
-    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
-    model.add(Conv2D(hyper_params['conv_nodes'], kernel_size=3, activation='relu'))
+    model.add(Conv2D(64, kernel_size=3, input_shape=input_shape))
+    for _ in range(hyper_params['camadas']):
+        for _ in range(hyper_params['conv1']):
+            model.add(Conv2D(32, kernel_size=3, activation='relu'))
+
+            if(hyper_params['drop1'] == 1):
+                model.add(Dropout(0.3))
+                
+        for _ in range(hyper_params['conv2']):
+            model.add(Conv2D(64, kernel_size=3, activation='relu'))
+   
+            if(hyper_params['drop2'] == 1):
+                model.add(Dropout(0.3))
+                
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Flatten())
+   
+    for _ in range(hyper_params['dense_layers1']):
+        model.add(Dense(2048, activation='relu'))
     
-    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
-    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
-    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
-    model.add(Dense(hyper_params['dense_nodes'], activation='relu'))
-        
-    model.add(Dense(12544, input_shape=(hyper_params['dense_nodes'],)))
-    
+    for _ in range(hyper_params['dense_layers2']):
+        model.add(Dense(512, activation='relu'))
+
     model.add(Dense(num_classes, activation='softmax'))
     
-
-    if hyper_params['optimizer'] == 'Adam':
-        optimizer = keras.optimizers.Adam(learning_rate=hyper_params['learning_rate'])
-    else:
-        optimizer = keras.optimizers.SGD(learning_rate=hyper_params['learning_rate'], momentum=0.9)
+    
+    optimizer = keras.optimizers.Adam(learning_rate=0.001)
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=optimizer, metrics=['accuracy'])
     return model
 
@@ -201,10 +168,15 @@ def generate_default_params():
     Generate default hyper parameters
     '''
     return {
-        'optimizer': 'Adam',
-        'learning_rate': 0.0001,
-        'dense_nodes':32,
-        'conv_nodes':32,
+        'camadas': 1,
+        'conv1': 1,
+        'conv1_aux':1,
+        'drop1':1,
+        'conv2': 1,
+        'conv2_aux': 1,
+        'drop2':1,
+        'dense_layers1':2,
+        'dense_layers2': 2
     }
 
 if __name__ == '__main__':

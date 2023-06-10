@@ -19,6 +19,6 @@ tuner:
     #optimize_mode: maximize
 
 trial:
-  command: python mednist.py
+  command: python mednist_nni.py
   codeDir: .
   gpuNum: 0

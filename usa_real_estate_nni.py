@@ -20,7 +20,6 @@ from sklearn.metrics import r2_score
 from keras.callbacks import ModelCheckpoint
 np.random.seed(0)
 
-
 LOG = logging.getLogger('reg_keras')
 LOG.setLevel(logging.DEBUG)
 
