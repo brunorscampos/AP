@@ -5,7 +5,7 @@ maxExecDuration: 10000000000h
 maxTrialNum: 5
 #choice: local, remote, pai
 trainingServicePlatform: local
-searchSpacePath: search_space_land_nas.json
+searchSpacePath: search_space_mednist.json
 #choice: true, false
 useAnnotation: false
 tuner:
@@ -19,6 +19,6 @@ tuner:
     #optimize_mode: maximize
 
 trial:
-  command: python land_nas.py
+  command: python mednist.py
   codeDir: .
   gpuNum: 0

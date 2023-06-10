@@ -133,11 +133,12 @@ class SendMetrics(keras.callbacks.Callback):
         Run on end of each epoch
         '''
         LOG.debug(logs)
-        # TensorFlow 2.0 API reference claims the key is `val_acc`, but in fact it's `val_accuracy`
-        if 'val_acc' in logs:
-            nni.report_intermediate_result(logs['val_acc'])
+        if 'val_acc' in logs and 'val_loss' in logs:
+            nni.report_intermediate_result({'accuracy': logs['val_acc'], 'loss': logs['val_loss']})
+        elif 'val_accuracy' in logs and 'val_loss' in logs:
+            nni.report_intermediate_result({'accuracy': logs['val_accuracy'], 'loss': logs['val_loss']})
         else:
-            nni.report_intermediate_result(logs['val_accuracy'])
+            LOG.warning("Accuracy or Loss not found in logs.")
             
 from keras.callbacks import ModelCheckpoint
 def train(args, params):
@@ -170,7 +171,7 @@ def generate_default_params():
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--batch_size", type=int, default=200, help="batch size", required=False)
+    PARSER.add_argument("--batch_size", type=int, default=64, help="batch size", required=False)
     PARSER.add_argument("--epochs", type=int, default=10, help="Train epochs", required=False)
     PARSER.add_argument("--num_train", type=int, default=60000, help="Number of train samples to be used, maximum 60000", required=False)
     PARSER.add_argument("--num_test", type=int, default=10000, help="Number of test samples to be used, maximum 10000", required=False)
