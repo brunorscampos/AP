@@ -1,5 +1,5 @@
 authorName: default
-experimentName: example_mnist-keras
+experimentName: land_nni
 trialConcurrency: 1
 maxExecDuration: 10000000000h
 maxTrialNum: 5

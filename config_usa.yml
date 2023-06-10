@@ -1,5 +1,5 @@
 authorName: default
-experimentName: example_mnist-keras
+experimentName: usa_real_estate_nni
 trialConcurrency: 1
 maxExecDuration: 10000000000h
 maxTrialNum: 10
