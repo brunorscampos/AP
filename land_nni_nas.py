@@ -27,17 +27,14 @@ file_handler.setFormatter(formatter)
 # Adicionar o manipulador de arquivo ao logger
 LOG.addHandler(file_handler)
 
-#print(f"Tensorflow version: {tf.__version__}")
-#print(f"Keras Version: {tf.keras.__version__}")
-#print("GPU is", "available" if tf.config.list_physical_devices('GPU') else "NOT AVAILABLE")
-
 K.set_image_data_format('channels_last')
 TENSORBOARD_DIR = current_directory = os.getcwd() + '/logs'
 
 H, W =64,64
 NUM_CLASSES = 21
 
-def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
+#Criar um modelo onde a arquitetura é alteravel
+def create_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLASSES):
     '''
     Create simple convolutional model
     '''
@@ -77,7 +74,7 @@ def create_mnist_model(hyper_params, input_shape=(H, W, 1), num_classes=NUM_CLAS
 import glob
 import cv2
 
-def load_mnist_data(hyper_params):
+def load_data(hyper_params):
     land_path = './archive/images/'  # Altere para o caminho correto do diretório MedNIST
 
     # Carregar imagens de treinamento
@@ -104,18 +101,22 @@ def load_mnist_data(hyper_params):
                     train_images.append(image)
                     train_labels.append(class_name)
 
+    #Normalização dos dados
     x_train = np.expand_dims(np.array(train_images), -1).astype(float) / 255.
     x_test = np.expand_dims(np.array(test_images), -1).astype(float) / 255.
-
+    
+    #Atribuir a classe aos dados
     label_to_index = {label: index for index, label in enumerate(set(train_labels))}
     y_train = np.array([label_to_index[label] for label in train_labels])
     y_test = np.array([label_to_index[label] for label in test_labels])
 
     num_classes = len(label_to_index)
     
+    #Label Encoder
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
+    #Regista dados no Log para debug
     LOG.debug('x_train shape: %s', (x_train.shape,))
     LOG.debug('x_test shape: %s', (x_test.shape,))
     LOG.debug('Number of training samples: %d', len(train_images))
@@ -132,7 +133,7 @@ class SendMetrics(keras.callbacks.Callback):
         Run on end of each epoch
         '''
         LOG.debug(logs)
-        # TensorFlow 2.0 API reference claims the key is `val_acc`, but in fact it's `val_accuracy`
+        #Enviar os valores de accuracy e loss para o frontend
         if 'val_acc' in logs and 'val_loss' in logs:
             nni.report_intermediate_result({'accuracy': logs['val_acc'], 'loss': logs['val_loss']})
         elif 'val_accuracy' in logs and 'val_loss' in logs:
@@ -148,18 +149,24 @@ def train(args, params):
     Train model
     '''
     current_directory = os.getcwd()
-
-    model_checkpoint_path = os.path.join(current_directory, 'best_model_land.h5')
+    
+    #Guardar o melhor modelo obtido durante o treino
+    model_checkpoint_path = os.path.join(current_directory, 'best_model_land_nas.h5')
+    
+    #Callback para terminar o treino mais cedo caso a loss minimo não alterar durante o periodo patience
     early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, mode='min')
+    
     checkpoint_callback = ModelCheckpoint(model_checkpoint_path, monitor='val_accuracy', save_best_only=True, mode='max', verbose=1)
 
-    x_train, y_train, x_test, y_test = load_mnist_data(params)
-    model = create_mnist_model(params)
+    x_train, y_train, x_test, y_test = load_data(params)
+    model = create_model(params)
 
     model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, verbose=1,
         validation_data=(x_test, y_test), callbacks=[SendMetrics(), TensorBoard(log_dir=TENSORBOARD_DIR), checkpoint_callback])
 
     _, acc = model.evaluate(x_test, y_test, verbose=0)
+    
+    #Enviar para o frontend o resultado final
     LOG.debug('Final result is: %d', acc)
     nni.report_final_result(acc)
 
@@ -183,8 +190,6 @@ if __name__ == '__main__':
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--batch_size", type=int, default=64, help="batch size", required=False)
     PARSER.add_argument("--epochs", type=int, default=10, help="Train epochs", required=False)
-    PARSER.add_argument("--num_train", type=int, default=60000, help="Number of train samples to be used, maximum 60000", required=False)
-    PARSER.add_argument("--num_test", type=int, default=10000, help="Number of test samples to be used, maximum 10000", required=False)
 
     ARGS, UNKNOWN = PARSER.parse_known_args()
 
