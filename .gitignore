@@ -3,7 +3,6 @@ data
 *.h5
 credit
 logs
-*.png
 lightning_logs
 __pycache__
 tpot_regression_test.py
